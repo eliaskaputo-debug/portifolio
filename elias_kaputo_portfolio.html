@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Elias Kaputo — Portfólio</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:#080d12;--map-bg:#0b1520;--panel:#0f1a24;--border:#1c3040;
+    --accent:#00e5a0;--amber:#e8a838;--red:#e84040;
+    --text:#d4cfc6;--muted:#5a6e7a;--white:#f0ece4;
+    --mono:'Space Mono',monospace;--serif:'Crimson Pro',Georgia,serif;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg);color:var(--text);font-family:var(--serif);font-size:17px;line-height:1.7;display:flex;height:100vh;overflow:hidden;}
+
+  /* MAP */
+  #map-panel{position:fixed;left:0;top:0;width:42%;height:100vh;background:var(--map-bg);border-right:1px solid var(--border);overflow:hidden;z-index:10;}
+  #map-canvas{width:100%;height:100%;}
+  .coord-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(0,229,160,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,160,.04) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;}
+  .map-badge{position:absolute;font-family:var(--mono);font-size:9px;color:var(--accent);letter-spacing:.1em;opacity:.7;pointer-events:none;}
+  .badge-tl{top:18px;left:20px;}.badge-br{bottom:18px;right:20px;text-align:right;}
+  .map-pin{position:absolute;display:flex;flex-direction:column;align-items:center;gap:3px;pointer-events:none;}
+  .pin-dot{width:10px;height:10px;border-radius:50%;border:2px solid;position:relative;}
+  .pin-dot::after{content:'';position:absolute;inset:-5px;border-radius:50%;border:1px solid;animation:pulse 2.4s ease-in-out infinite;opacity:0;}
+  @keyframes pulse{0%{transform:scale(.6);opacity:.8;}100%{transform:scale(2.2);opacity:0;}}
+  .pin-label{font-family:var(--mono);font-size:8px;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;}
+  .pin-luanda .pin-dot{border-color:var(--amber);background:rgba(232,168,56,.25);}
+  .pin-luanda .pin-dot::after{border-color:var(--amber);}
+  .pin-luanda .pin-label{color:var(--amber);}
+  .pin-lisboa .pin-dot{border-color:var(--accent);background:rgba(0,229,160,.25);}
+  .pin-lisboa .pin-dot::after{border-color:var(--accent);animation-delay:1.2s;}
+  .pin-lisboa .pin-label{color:var(--accent);}
+  .scale-bar{position:absolute;bottom:48px;left:20px;display:flex;flex-direction:column;gap:4px;}
+  .scale-bar span{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.1em;}
+  .scale-line{width:60px;height:3px;background:linear-gradient(90deg,var(--muted) 0%,var(--muted) 50%,transparent 50%);background-size:10px 100%;border-top:1px solid var(--muted);border-bottom:1px solid var(--muted);}
+  .elev-legend{position:absolute;bottom:48px;right:20px;display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
+  .elev-legend span{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.08em;}
+  .elev-bar{width:80px;height:8px;border-radius:2px;background:linear-gradient(90deg,#0b2a1a,#1a5c30,#3d8c4f,var(--amber),#c44a2a);}
+
+  /* CONTENT */
+  #content-panel{margin-left:42%;width:58%;height:100vh;overflow-y:auto;scroll-behavior:smooth;}
+  #content-panel::-webkit-scrollbar{width:4px;}
+  #content-panel::-webkit-scrollbar-track{background:var(--panel);}
+  #content-panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+  /* HERO */
+  #hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:72px 60px 60px;position:relative;border-bottom:1px solid var(--border);}
+  .hero-eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.22em;color:var(--accent);text-transform:uppercase;margin-bottom:28px;display:flex;align-items:center;gap:12px;}
+  .hero-eyebrow::before{content:'';display:block;width:32px;height:1px;background:var(--accent);}
+  .hero-name{font-family:var(--serif);font-size:clamp(2.8rem,5vw,4.2rem);font-weight:300;color:var(--white);line-height:1.1;letter-spacing:-.01em;margin-bottom:10px;}
+  .hero-name em{font-style:italic;color:var(--accent);}
+  .hero-surname{font-family:var(--serif);font-size:clamp(2.8rem,5vw,4.2rem);font-weight:600;color:var(--white);line-height:1.1;letter-spacing:-.01em;margin-bottom:32px;}
+  .hero-tagline{font-family:var(--serif);font-style:italic;font-size:1.25rem;color:var(--text);font-weight:300;max-width:400px;margin-bottom:48px;line-height:1.6;}
+  .hero-coords{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.12em;display:flex;flex-direction:column;gap:5px;}
+  .coord-line{display:flex;gap:16px;}
+  .coord-label{color:var(--accent);min-width:50px;}
+  .hero-contact{position:absolute;bottom:36px;right:60px;text-align:right;}
+  .hero-contact a{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);text-decoration:none;letter-spacing:.1em;transition:color .2s;margin-bottom:6px;}
+  .hero-contact a:hover{color:var(--accent);}
+
+  /* SECTIONS */
+  section{padding:72px 60px;border-bottom:1px solid var(--border);}
+  .section-header{display:flex;align-items:baseline;gap:20px;margin-bottom:48px;}
+  .section-num{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.15em;}
+  .section-title{font-family:var(--serif);font-size:1.9rem;font-weight:300;color:var(--white);letter-spacing:-.01em;}
+  .section-line{flex:1;height:1px;background:var(--border);margin-left:auto;max-width:80px;}
+
+  /* ABOUT */
+  #about .about-text{font-size:1.15rem;line-height:1.85;color:var(--text);max-width:520px;}
+  #about .about-text p{margin-bottom:1.2em;}
+  #about .about-text strong{color:var(--white);font-weight:600;}
+  #about .about-text em{color:var(--accent);font-style:italic;}
+
+  /* LAYERS */
+  #layers .layers-intro{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:32px;}
+  .layer-group{margin-bottom:40px;}
+  .layer-label{font-family:var(--mono);font-size:9px;color:var(--accent);letter-spacing:.18em;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:10px;}
+  .layer-label::before{content:'▶';font-size:7px;opacity:.6;}
+  .layer-tags{display:flex;flex-wrap:wrap;gap:8px;}
+  .tag{font-family:var(--mono);font-size:9px;letter-spacing:.1em;padding:5px 12px;border:1px solid var(--border);border-radius:2px;color:var(--text);text-transform:uppercase;transition:all .2s;position:relative;overflow:hidden;}
+  .tag::before{content:'';position:absolute;inset:0;background:var(--accent);transform:translateX(-100%);transition:transform .25s;z-index:-1;opacity:.1;}
+  .tag:hover{border-color:var(--accent);color:var(--white);}
+  .tag:hover::before{transform:translateX(0);}
+  .tag.geo{border-color:#1c4030;color:var(--accent);}
+  .tag.tech{border-color:#1a2a40;}
+  .tag.people{border-color:#3a2a10;color:var(--amber);}
+
+  /* LANGUAGES */
+  .lang-item{margin-bottom:28px;}
+  .lang-name{font-family:var(--serif);font-size:1.1rem;color:var(--white);margin-bottom:6px;display:flex;justify-content:space-between;align-items:baseline;}
+  .lang-native{font-family:var(--mono);font-size:9px;color:var(--accent);letter-spacing:.12em;}
+  .lang-levels{display:flex;gap:4px;margin-bottom:6px;}
+  .level-pip{width:28px;height:4px;border-radius:1px;background:var(--border);}
+  .level-pip.on{background:var(--accent);}
+  .level-pip.partial{background:rgba(0,229,160,.35);}
+  .lang-note{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.1em;}
+
+  /* TRAJECTORY */
+  .traj-item{display:grid;grid-template-columns:120px 1px 1fr;gap:0 20px;margin-bottom:40px;}
+  .traj-date{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.1em;text-align:right;padding-top:4px;line-height:1.5;}
+  .traj-date .year{color:var(--text);font-size:11px;}
+  .traj-spine{width:1px;background:var(--border);position:relative;}
+  .traj-spine::before{content:'';position:absolute;top:6px;left:50%;transform:translateX(-50%);width:7px;height:7px;border-radius:50%;background:var(--bg);border:1.5px solid var(--muted);transition:border-color .2s;}
+  .traj-item:hover .traj-spine::before{border-color:var(--accent);background:rgba(0,229,160,.15);}
+  .traj-item.current .traj-spine::before{border-color:var(--accent);background:var(--accent);box-shadow:0 0 8px rgba(0,229,160,.5);}
+  .traj-role{font-family:var(--serif);font-size:1.05rem;font-weight:600;color:var(--white);line-height:1.3;margin-bottom:3px;}
+  .traj-org{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;}
+  .traj-org .loc{color:var(--accent);}
+  .traj-bullets{list-style:none;font-size:.9rem;color:var(--text);line-height:1.6;}
+  .traj-bullets li{padding-left:14px;position:relative;margin-bottom:4px;}
+  .traj-bullets li::before{content:'—';position:absolute;left:0;color:var(--muted);font-size:.7rem;}
+
+  /* EDUCATION */
+  .edu-card{border:1px solid var(--border);padding:28px 32px;position:relative;overflow:hidden;}
+  .edu-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:linear-gradient(180deg,var(--accent),var(--amber));}
+  .edu-degree{font-family:var(--serif);font-size:1.2rem;font-weight:600;color:var(--white);margin-bottom:6px;}
+  .edu-school{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;}
+  .edu-period{font-family:var(--mono);font-size:9px;color:var(--accent);letter-spacing:.1em;}
+
+  /* FOOTER */
+  #footer{padding:56px 60px;border-bottom:none;}
+  .footer-title{font-family:var(--serif);font-size:1.8rem;font-weight:300;color:var(--white);margin-bottom:32px;font-style:italic;}
+  .contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .contact-item{border:1px solid var(--border);padding:16px 20px;transition:border-color .2s;}
+  .contact-item:hover{border-color:var(--accent);}
+  .contact-type{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;margin-bottom:6px;}
+  .contact-val{font-family:var(--mono);font-size:11px;color:var(--text);letter-spacing:.05em;}
+
+  /* NAV DOTS */
+  #nav-dots{position:fixed;right:20px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px;z-index:100;}
+  .nav-dot{width:6px;height:6px;border-radius:50%;background:var(--border);cursor:pointer;transition:all .2s;position:relative;}
+  .nav-dot:hover,.nav-dot.active{background:var(--accent);box-shadow:0 0 6px rgba(0,229,160,.5);}
+  .nav-dot[data-label]::after{content:attr(data-label);position:absolute;right:16px;top:50%;transform:translateY(-50%);font-family:var(--mono);font-size:8px;color:var(--text);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;opacity:0;transition:opacity .2s;background:var(--panel);padding:3px 8px;border:1px solid var(--border);pointer-events:none;}
+  .nav-dot:hover[data-label]::after{opacity:1;}
+
+  /* ANIMATIONS */
+  @keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+  #hero>*{animation:fadeUp .8s ease both;}
+  #hero .hero-eyebrow{animation-delay:.1s;}
+  #hero .hero-name{animation-delay:.25s;}
+  #hero .hero-surname{animation-delay:.35s;}
+  #hero .hero-tagline{animation-delay:.5s;}
+  #hero .hero-coords{animation-delay:.65s;}
+  #hero .hero-contact{animation-delay:.8s;}
+
+  @media(max-width:860px){
+    body{flex-direction:column;height:auto;overflow:auto;}
+    #map-panel{position:relative;width:100%;height:50vw;border-right:none;border-bottom:1px solid var(--border);}
+    #content-panel{margin-left:0;width:100%;height:auto;overflow:visible;}
+    #nav-dots{display:none;}
+    section,#hero,#footer{padding:48px 28px;}
+    .traj-item{grid-template-columns:80px 1px 1fr;}
+    .contact-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<!-- LEFT MAP -->
+<div id="map-panel">
+  <canvas id="map-canvas"></canvas>
+  <div class="coord-grid"></div>
+  <div class="map-badge badge-tl">ELIAS KAPUTO — GIS PORTFOLIO<br>PROJECTION · WGS84 · EPSG:4326</div>
+  <div class="map-badge badge-br">DATA LAYERS: ACTIVE<br>LAST SYNC · 2026·05·25</div>
+  <div class="map-pin pin-luanda" id="pin-luanda">
+    <div class="pin-dot"></div>
+    <div class="pin-label">Luanda · AO</div>
+  </div>
+  <div class="map-pin pin-lisboa" id="pin-lisboa">
+    <div class="pin-dot"></div>
+    <div class="pin-label">Lisboa · PT</div>
+  </div>
+  <div class="scale-bar">
+    <span>ESCALA APROX.</span>
+    <div class="scale-line"></div>
+    <span>0 ————— 2000 KM</span>
+  </div>
+  <div class="elev-legend">
+    <span>ELEVAÇÃO</span>
+    <div class="elev-bar"></div>
+    <span>0m ——————— 2400m</span>
+  </div>
+</div>
+
+<!-- NAV DOTS -->
+<nav id="nav-dots">
+  <div class="nav-dot active" data-target="hero"      data-label="Início"></div>
+  <div class="nav-dot"       data-target="about"      data-label="Sobre"></div>
+  <div class="nav-dot"       data-target="layers"     data-label="Competências"></div>
+  <div class="nav-dot"       data-target="trajetoria" data-label="Trajetória"></div>
+  <div class="nav-dot"       data-target="formacao"   data-label="Formação"></div>
+  <div class="nav-dot"       data-target="footer"     data-label="Contacto"></div>
+</nav>
+
+<!-- RIGHT CONTENT -->
+<div id="content-panel">
+
+  <div id="hero">
+    <div class="hero-eyebrow">Topografia · SIG · Relações Públicas</div>
+    <div class="hero-name"><em>Elias</em> Kaputo</div>
+    <div class="hero-surname">Issenguele</div>
+    <div class="hero-tagline">De Luanda a Lisboa, mapeando territórios,<br>construindo relações.</div>
+    <div class="hero-coords">
+      <div class="coord-line"><span class="coord-label">ORIGEM</span><span>8°50'S · 13°14'E — Luanda, Angola</span></div>
+      <div class="coord-line"><span class="coord-label">ATUAL</span><span>38°43'N · 9°8'W — Lisboa, Portugal</span></div>
+      <div class="coord-line"><span class="coord-label">NASCIDO</span><span>09.05.2001 · 24 anos</span></div>
+    </div>
+    <div class="hero-contact">
+      <a href="tel:+351936210740">(+351) 936 210 740</a>
+      <a href="mailto:elias_kaputo@outlook.com">elias_kaputo@outlook.com</a>
+      <a>Rua das Cotovias 88, Lisboa</a>
+    </div>
+  </div>
+
+  <section id="about">
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <h2 class="section-title">Quem sou</h2>
+      <div class="section-line"></div>
+    </div>
+    <div class="about-text">
+      <p>Nasci em Luanda com um olhar que sempre quis entender o espaço — a distância entre as coisas, a forma como as pessoas habitam o território. Essa curiosidade levou-me naturalmente à <strong>Topografia e aos Sistemas de Informação Geográfica</strong>.</p>
+      <p>Mas o mundo não é apenas terra e coordenadas. É feito de <em>pessoas, histórias e conexões</em>. Por isso construí também uma trajetória nas Relações Públicas, na gestão de equipas e no contacto direto com o outro — de agências de viagens em Angola a restaurantes e equipas em Portugal.</p>
+      <p>Hoje vivo em Lisboa, onde continuo a cruzar esses dois mundos: a <strong>precisão técnica</strong> de quem sabe ler um mapa e a <em>inteligência humana</em> de quem sabe ler as pessoas.</p>
+    </div>
+  </section>
+
+  <section id="layers">
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <h2 class="section-title">Camadas</h2>
+      <div class="section-line"></div>
+    </div>
+    <div class="layers-intro">// Cada competência é uma camada activa no sistema</div>
+    <div class="layer-group">
+      <div class="layer-label">Geoespacial &amp; SIG</div>
+      <div class="layer-tags">
+        <span class="tag geo">ArcGIS</span><span class="tag geo">QGIS</span>
+        <span class="tag geo">Google Earth</span><span class="tag geo">Topografia</span>
+        <span class="tag geo">Levantamento de Campo</span><span class="tag geo">Cartografia</span>
+      </div>
+    </div>
+    <div class="layer-group">
+      <div class="layer-label">Ferramentas Digitais</div>
+      <div class="layer-tags">
+        <span class="tag tech">Microsoft Excel</span><span class="tag tech">Word</span>
+        <span class="tag tech">PowerPoint</span><span class="tag tech">Office 365</span>
+        <span class="tag tech">Redes Sociais</span>
+      </div>
+    </div>
+    <div class="layer-group">
+      <div class="layer-label">Pessoas &amp; Gestão</div>
+      <div class="layer-tags">
+        <span class="tag people">Relações Públicas</span><span class="tag people">Gestão de Equipas</span>
+        <span class="tag people">Marketing</span><span class="tag people">Eventos</span>
+        <span class="tag people">Atendimento</span><span class="tag people">Treino Desportivo</span>
+      </div>
+    </div>
+    <div style="margin-top:44px;padding-top:40px;border-top:1px solid var(--border);">
+      <div class="layers-intro" style="margin-bottom:28px;">// Idiomas</div>
+      <div class="lang-item">
+        <div class="lang-name">Português <span class="lang-native">Língua Materna</span></div>
+        <div class="lang-levels">
+          <div class="level-pip on"></div><div class="level-pip on"></div>
+          <div class="level-pip on"></div><div class="level-pip on"></div><div class="level-pip on"></div>
+        </div>
+        <div class="lang-note">C2 — Nativo</div>
+      </div>
+      <div class="lang-item">
+        <div class="lang-name">Inglês</div>
+        <div class="lang-levels">
+          <div class="level-pip on"></div><div class="level-pip on"></div>
+          <div class="level-pip on"></div><div class="level-pip partial"></div><div class="level-pip"></div>
+        </div>
+        <div class="lang-note">Compreensão B1 · Fala B2 · Escrita A2</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="trajetoria">
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <h2 class="section-title">Trajetória</h2>
+      <div class="section-line"></div>
+    </div>
+    <div class="traj-list">
+      <div class="traj-item current">
+        <div class="traj-date"><span class="year">2025</span><br>Set → Atual</div>
+        <div class="traj-spine"></div>
+        <div class="traj-body">
+          <div class="traj-role">Técnico de Relações Públicas</div>
+          <div class="traj-org">McDonald's — <span class="loc">Cascais, Lisboa</span></div>
+          <ul class="traj-bullets">
+            <li>Gestão de relações com clientes e fornecedores</li>
+            <li>Manutenção de computadores e sistemas internos</li>
+            <li>Treino de equipa jovem de hóquei no gelo (10h/semana)</li>
+          </ul>
+        </div>
+      </div>
+      <div class="traj-item">
+        <div class="traj-date"><span class="year">2024</span><br>Jun → Set 2025</div>
+        <div class="traj-spine"></div>
+        <div class="traj-body">
+          <div class="traj-role">Operador de Caixa</div>
+          <div class="traj-org">McDonald's — <span class="loc">Cascais, Lisboa</span></div>
+          <ul class="traj-bullets"><li>Atendimento ao cliente e gestão de caixa</li></ul>
+        </div>
+      </div>
+      <div class="traj-item">
+        <div class="traj-date"><span class="year">2024</span><br>Mai → Mar 2025</div>
+        <div class="traj-spine"></div>
+        <div class="traj-body">
+          <div class="traj-role">Empregado de Mesa</div>
+          <div class="traj-org">Maria dos Tachos — <span class="loc">Cascais, Lisboa</span></div>
+          <ul class="traj-bullets"><li>Atendimento e serviço em mesa</li></ul>
+        </div>
+      </div>
+      <div class="traj-item">
+        <div class="traj-date"><span class="year">2023</span><br>Fev → Mar 2024</div>
+        <div class="traj-spine"></div>
+        <div class="traj-body">
+          <div class="traj-role">Agente de Viagens</div>
+          <div class="traj-org">Valdemiro Travel — <span class="loc">Luanda, Angola</span></div>
+          <ul class="traj-bullets">
+            <li>Planeamento e reserva de viagens</li>
+            <li>Informação sobre destinos e opções de hospedagem</li>
+            <li>Suporte durante o processo de viagem</li>
+          </ul>
+        </div>
+      </div>
+      <div class="traj-item">
+        <div class="traj-date"><span class="year">2021</span><br>Jun → Mai 2022</div>
+        <div class="traj-spine"></div>
+        <div class="traj-body">
+          <div class="traj-role">Gerente de Marketing</div>
+          <div class="traj-org">Terra Bela Eventos — <span class="loc">Luanda, Angola</span></div>
+          <ul class="traj-bullets">
+            <li>Planeamento e organização de eventos</li>
+            <li>Coordenação e supervisão de equipas</li>
+            <li>Gestão de relações com fornecedores</li>
+            <li>Controlo de orçamento e despesas</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="formacao">
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <h2 class="section-title">Formação</h2>
+      <div class="section-line"></div>
+    </div>
+    <div class="edu-card">
+      <div class="edu-degree">Técnico Médio de Topografia</div>
+      <div class="edu-school">Instituto Politécnico de Ciências Geográficas — Luanda, Angola</div>
+      <div class="edu-period">Fevereiro 2018 → Maio 2021</div>
+    </div>
+  </section>
+
+  <section id="footer">
+    <div class="section-header">
+      <span class="section-num">05</span>
+      <h2 class="section-title">Contacto</h2>
+      <div class="section-line"></div>
+    </div>
+    <p class="footer-title">Pronto para mapear novos territórios.</p>
+    <div class="contact-grid">
+      <div class="contact-item">
+        <div class="contact-type">Telemóvel</div>
+        <div class="contact-val">(+351) 936 210 740</div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-type">E-mail</div>
+        <div class="contact-val">elias_kaputo@outlook.com</div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-type">Morada</div>
+        <div class="contact-val">Rua das Cotovias 88, 3º Drt<br>2645-411 Lisboa</div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-type">Naturalidade</div>
+        <div class="contact-val">Angolano · 09/05/2001<br>Masculino</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* CANVAS MAP */
+(function(){
+  const canvas=document.getElementById('map-canvas');
+  const ctx=canvas.getContext('2d');
+  let W,H,t=0;
+
+  function resize(){
+    W=canvas.width=canvas.offsetWidth;
+    H=canvas.height=canvas.offsetHeight;
+    positionPins();
+  }
+
+  function geo(lon,lat){
+    const lonMin=-18,lonMax=20,latMin=-22,latMax=48;
+    return{x:((lon-lonMin)/(lonMax-lonMin))*W,y:(1-(lat-latMin)/(latMax-latMin))*H};
+  }
+
+  function positionPins(){
+    const lu=geo(13.23,-8.84),li=geo(-9.14,38.72);
+    const p1=document.getElementById('pin-luanda');
+    const p2=document.getElementById('pin-lisboa');
+    p1.style.left=(lu.x-30)+'px'; p1.style.top=(lu.y-18)+'px';
+    p2.style.left=(li.x-30)+'px'; p2.style.top=(li.y-18)+'px';
+  }
+
+  function elev(x,y){
+    const lu=geo(13.23,-8.84),li=geo(-9.14,38.72);
+    const dlu=Math.sqrt((x-lu.x)**2+(y-lu.y)**2);
+    const dli=Math.sqrt((x-li.x)**2+(y-li.y)**2);
+    const p1=Math.exp(-dlu*dlu/(W*0.04)**2)*1.5;
+    const p2=Math.exp(-dli*dli/(W*0.04)**2)*1.5;
+    const b=(Math.sin(x*0.018+t*0.3)*Math.cos(y*0.015-t*0.2)+Math.sin(x*0.032-t*0.18)*Math.cos(y*0.028+t*0.25))*0.4;
+    return p1+p2+b;
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='#0b1520'; ctx.fillRect(0,0,W,H);
+    const LEVELS=18,step=6;
+    for(let lv=0;lv<LEVELS;lv++){
+      const thr=(lv/LEVELS)*2.5-0.6;
+      const a=0.12+(lv/LEVELS)*0.22;
+      const r=Math.round(10+(lv/LEVELS)*200);
+      const g=Math.round(40+(lv/LEVELS)*80);
+      const b=Math.round(20+(lv/LEVELS)*10);
+      ctx.strokeStyle=`rgba(${r},${g},${b},${a})`;
+      ctx.lineWidth=lv%4===0?1.5:0.8;
+      for(let y=0;y<H;y+=step){
+        let inside=false,sx=0;
+        for(let x=0;x<=W;x+=step){
+          const above=elev(x,y)>thr;
+          if(above!==inside){
+            if(!inside){sx=x;inside=true;}
+            else{ctx.beginPath();ctx.moveTo(sx,y);ctx.lineTo(x,y);ctx.stroke();inside=false;}
+          }
+        }
+      }
+    }
+    // Route
+    const lu=geo(13.23,-8.84),li=geo(-9.14,38.72);
+    ctx.save();
+    ctx.setLineDash([5,7]);
+    ctx.lineDashOffset=-t*12;
+    ctx.strokeStyle='rgba(0,229,160,0.35)';
+    ctx.lineWidth=1.2;
+    const cpx=(lu.x+li.x)/2-60,cpy=(lu.y+li.y)/2;
+    ctx.beginPath();ctx.moveTo(lu.x,lu.y);
+    ctx.quadraticCurveTo(cpx,cpy,li.x,li.y);
+    ctx.stroke();ctx.restore();
+    // Grid
+    ctx.strokeStyle='rgba(0,229,160,0.04)';ctx.lineWidth=0.5;
+    ctx.setLineDash([]);
+    for(let x=0;x<=W;x+=48){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+    for(let y=0;y<=H;y+=48){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  }
+
+  function frame(){t+=0.006;draw();requestAnimationFrame(frame);}
+  window.addEventListener('resize',resize);
+  resize();frame();
+})();
+
+/* NAV DOTS */
+(function(){
+  const dots=document.querySelectorAll('.nav-dot');
+  const panel=document.getElementById('content-panel');
+  const ids=['hero','about','layers','trajetoria','formacao','footer'];
+  dots.forEach(d=>d.addEventListener('click',()=>document.getElementById(d.dataset.target)?.scrollIntoView({behavior:'smooth'})));
+  panel.addEventListener('scroll',()=>{
+    let active=0;
+    ids.forEach((id,i)=>{const el=document.getElementById(id);if(el&&el.offsetTop-panel.offsetTop<=panel.scrollTop+80)active=i;});
+    dots.forEach((d,i)=>d.classList.toggle('active',i===active));
+  });
+})();
+</script>
+</body>
+</html>
